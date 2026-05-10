@@ -1,20 +1,6 @@
 import { useRef, useState, useMemo } from 'react'
 import html2canvas from 'html2canvas'
 
-import {
-  DndContext,
-  closestCenter
-} from '@dnd-kit/core'
-
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy
-} from '@dnd-kit/sortable'
-
-import { CSS } from '@dnd-kit/utilities'
-
 export default function App() {
 
   const [photos, setPhotos] = useState([])
@@ -25,6 +11,7 @@ export default function App() {
   const inputRef = useRef(null)
   const previewRef = useRef(null)
 
+  // PAGE SIZE
   const pageSize =
     layout === '2x2' ? 4 :
     layout === '2x3' ? 6 :
@@ -47,55 +34,60 @@ export default function App() {
 
   const currentPage = pages[pageIndex] || []
 
+  // UPLOAD
   const handleUpload = async (e) => {
 
     const files = Array.from(e.target.files || [])
 
     const read = (file) => new Promise((res) => {
       const r = new FileReader()
-      r.onload = () => res({ url: r.result, id: crypto.randomUUID() })
+      r.onload = () => res({ url: r.result })
       r.readAsDataURL(file)
     })
 
     const imgs = await Promise.all(files.map(read))
 
     setPhotos(prev => [...prev, ...imgs])
+    setPageIndex(0)
   }
 
-  const handleDragEnd = (event) => {
-
-    const { active, over } = event
-
-    if (!over || active.id === over.id) return
-
-    setPhotos((items) => {
-
-      const oldIndex = items.findIndex(i => i.id === active.id)
-      const newIndex = items.findIndex(i => i.id === over.id)
-
-      return arrayMove(items, oldIndex, newIndex)
-    })
+  // RESET
+  const resetAll = () => {
+    setPhotos([])
+    setCaptions({})
+    setPageIndex(0)
   }
 
+  // NEXT PREV
+  const nextPage = () => {
+    if (pageIndex < pages.length - 1) setPageIndex(p => p + 1)
+  }
+
+  const prevPage = () => {
+    if (pageIndex > 0) setPageIndex(p => p - 1)
+  }
+
+  // EXPORT 1 PAGE
   const exportCurrentPage = async () => {
 
-    const node = previewRef.current
-
-    const canvas = await html2canvas(node, {
+    const canvas = await html2canvas(previewRef.current, {
       scale: 2,
       useCORS: true,
       backgroundColor: "#fff"
     })
 
-    const a = document.createElement('a')
-    a.download = `page-${pageIndex + 1}.jpg`
-    a.href = canvas.toDataURL('image/jpeg', 1.0)
-    a.click()
+    const link = document.createElement('a')
+    link.download = `page-${pageIndex + 1}.jpg`
+    link.href = canvas.toDataURL('image/jpeg', 1.0)
+    link.click()
   }
 
+  // DOWNLOAD ALL (MERGE JPG)
   const downloadAll = async () => {
 
     const pagesEl = document.querySelectorAll('.page')
+
+    if (!pagesEl.length) return
 
     const canvases = []
 
@@ -141,11 +133,30 @@ export default function App() {
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* CONTROL */}
+        {/* CONTROL PANEL */}
         <div className="bg-white p-6 rounded-3xl space-y-4">
 
-          <h1 className="font-bold text-xl">Auto Report</h1>
+          <h1 className="font-bold text-xl">Auto Photo Report</h1>
 
+          {/* LAYOUT */}
+          <div className="grid grid-cols-2 gap-2">
+
+            {['2x2','2x3','3x2','3x3'].map(l => (
+              <button
+                key={l}
+                onClick={() => {
+                  setLayout(l)
+                  setPageIndex(0)
+                }}
+                className={`py-2 border rounded-xl ${layout === l ? 'bg-black text-white' : ''}`}
+              >
+                {l}
+              </button>
+            ))}
+
+          </div>
+
+          {/* UPLOAD */}
           <input
             ref={inputRef}
             type="file"
@@ -162,84 +173,120 @@ export default function App() {
             Upload Foto
           </button>
 
+          {/* NAV */}
+          <div className="flex gap-2">
+
+            <button
+              onClick={prevPage}
+              className="w-full py-2 border rounded-xl"
+            >
+              Prev
+            </button>
+
+            <button
+              onClick={nextPage}
+              className="w-full py-2 border rounded-xl"
+            >
+              Next
+            </button>
+
+          </div>
+
+          {/* EXPORT */}
           <button
             onClick={exportCurrentPage}
             className="w-full py-2 bg-black text-white rounded-xl"
           >
-            Export Page
+            Export Page (JPG)
           </button>
 
           <button
             onClick={downloadAll}
             className="w-full py-2 bg-green-600 text-white rounded-xl"
           >
-            Download Semua
+            Download Semua (JPG)
           </button>
+
+          {/* RESET */}
+          <button
+            onClick={resetAll}
+            className="w-full py-2 border rounded-xl text-red-600"
+          >
+            Reset Semua
+          </button>
+
+          {/* CAPTION */}
+          <div className="space-y-2 max-h-64 overflow-auto">
+
+            <h2 className="font-semibold">Keterangan Foto</h2>
+
+            {Array.from({ length: photos.length }).map((_, i) => (
+              <input
+                key={i}
+                value={captions[i] || ''}
+                onChange={(e) =>
+                  setCaptions(prev => ({
+                    ...prev,
+                    [i]: e.target.value
+                  }))
+                }
+                className="w-full border rounded-xl px-3 py-2 text-sm"
+                placeholder={`Foto ${i + 1}`}
+              />
+            ))}
+
+          </div>
 
         </div>
 
         {/* PREVIEW */}
         <div className="lg:col-span-2">
 
-          <DndContext
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
+          <div
+            ref={previewRef}
+            className="page bg-white p-6 rounded-xl shadow mx-auto"
+            style={{ width: 850 }}
           >
 
-            <div
-              ref={previewRef}
-              className="page bg-white p-6 rounded-xl shadow mx-auto"
-              style={{ width: 850 }}
-            >
+            <h2 className="text-center font-bold mb-4">
+              PAGE {pageIndex + 1} / {pages.length || 1}
+            </h2>
 
-              <div className={`grid ${cols} gap-3`}>
+            <div className={`grid ${cols} gap-3`}>
 
-                <SortableContext items={photos.map(p => p.id)}>
+              {currentPage.map((img, i) => {
 
-                  {photos.map((img, i) => (
-                    <SortableItem key={img.id} id={img.id} img={img} />
-                  ))}
+                const globalIndex = pageIndex * pageSize + i
 
-                </SortableContext>
+                return (
 
-              </div>
+                  <div key={globalIndex}>
+
+                    <div className="aspect-[3/4] bg-gray-200 rounded overflow-hidden">
+
+                      <img
+                        src={img.url}
+                        className="w-full h-full object-cover"
+                      />
+
+                    </div>
+
+                    <p className="text-center text-xs mt-1">
+                      {captions[globalIndex] || `Foto ${globalIndex + 1}`}
+                    </p>
+
+                  </div>
+
+                )
+              })}
 
             </div>
 
-          </DndContext>
+          </div>
 
         </div>
 
       </div>
-    </div>
-  )
-}
-
-// 🔥 DRAG ITEM
-function SortableItem({ id, img }) {
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition
-  } = useSortable({ id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="aspect-[3/4] bg-gray-200 rounded overflow-hidden cursor-grab"
-    >
-      <img src={img.url} className="w-full h-full object-cover" />
     </div>
   )
 }
