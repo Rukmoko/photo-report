@@ -1,6 +1,5 @@
 import { useRef, useState, useMemo } from 'react'
 import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
 
 export default function App() {
 
@@ -44,14 +43,18 @@ export default function App() {
   // UPLOAD
   const handleUpload = async (e) => {
 
-    const files = Array.from(e.target.files || [])
+    const files = Array.from(
+      e.target.files || []
+    )
 
     const readFile = (file) => {
+
       return new Promise((resolve) => {
 
         const reader = new FileReader()
 
         reader.onload = () => {
+
           resolve({
             url: reader.result
           })
@@ -65,7 +68,10 @@ export default function App() {
       files.map(readFile)
     )
 
-    setPhotos(prev => [...prev, ...images])
+    setPhotos(prev => [
+      ...prev,
+      ...images
+    ])
 
     setPageIndex(0)
   }
@@ -82,6 +88,7 @@ export default function App() {
   const nextPage = () => {
 
     if (pageIndex < pages.length - 1) {
+
       setPageIndex(prev => prev + 1)
     }
   }
@@ -90,6 +97,7 @@ export default function App() {
   const prevPage = () => {
 
     if (pageIndex > 0) {
+
       setPageIndex(prev => prev - 1)
     }
   }
@@ -101,22 +109,29 @@ export default function App() {
 
     try {
 
-      const canvas = await html2canvas(
-        previewRef.current,
-        {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff'
-        }
-      )
+      const canvas =
+        await html2canvas(
+          previewRef.current,
+          {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff'
+          }
+        )
 
-      const link = document.createElement('a')
+      const link =
+        document.createElement('a')
 
       link.download =
-        'page-' + (pageIndex + 1) + '.jpg'
+        'page-' +
+        (pageIndex + 1) +
+        '.jpg'
 
       link.href =
-        canvas.toDataURL('image/jpeg', 1.0)
+        canvas.toDataURL(
+          'image/jpeg',
+          1.0
+        )
 
       document.body.appendChild(link)
 
@@ -124,65 +139,78 @@ export default function App() {
 
       document.body.removeChild(link)
 
-    } catch (error) {
+    } catch (err) {
 
-      console.error(error)
+      console.error(err)
 
       alert('Gagal export JPG')
     }
   }
 
-  // EXPORT PDF
-  const exportPDF = async () => {
+  // SAVE AS PDF
+  const exportPDF = () => {
 
     if (!previewRef.current) return
 
-    try {
+    const printContents =
+      previewRef.current.innerHTML
 
-      const canvas = await html2canvas(
-        previewRef.current,
-        {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff'
-        }
-      )
+    const win = window.open(
+      '',
+      '',
+      'width=900,height=650'
+    )
 
-      const imgData =
-        canvas.toDataURL('image/jpeg', 1.0)
+    win.document.write(`
+      <html>
 
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      })
+        <head>
 
-      const pdfWidth = 210
+          <title>
+            Dokumentasi Foto
+          </title>
 
-      const pdfHeight =
-        (canvas.height * pdfWidth) / canvas.width
+          <style>
 
-      pdf.addImage(
-        imgData,
-        'JPEG',
-        0,
-        0,
-        pdfWidth,
-        pdfHeight
-      )
+            body{
+              font-family:Arial;
+              padding:20px;
+            }
 
-      pdf.save(
-        'dokumentasi-' +
-        Date.now() +
-        '.pdf'
-      )
+            .grid{
+              display:grid;
+              grid-template-columns:repeat(3,1fr);
+              gap:12px;
+            }
 
-    } catch (error) {
+            img{
+              width:100%;
+              height:auto;
+              object-fit:cover;
+            }
 
-      console.error(error)
+          </style>
 
-      alert('Gagal membuat PDF')
-    }
+        </head>
+
+        <body>
+
+          ${printContents}
+
+        </body>
+
+      </html>
+    `)
+
+    win.document.close()
+
+    win.focus()
+
+    setTimeout(() => {
+
+      win.print()
+
+    }, 500)
   }
 
   return (
@@ -194,6 +222,7 @@ export default function App() {
         {/* LEFT PANEL */}
         <div className="bg-white rounded-3xl shadow-lg p-6 space-y-4">
 
+          {/* TITLE */}
           <div>
 
             <h1 className="text-2xl font-bold">
@@ -215,12 +244,19 @@ export default function App() {
 
             <div className="grid grid-cols-2 gap-2">
 
-              {['2x2', '2x3', '3x2', '3x3'].map((item) => (
+              {[
+                '2x2',
+                '2x3',
+                '3x2',
+                '3x3'
+              ].map((item) => (
 
                 <button
                   key={item}
                   onClick={() => {
+
                     setLayout(item)
+
                     setPageIndex(0)
                   }}
                   className={`py-2 rounded-xl border ${
@@ -235,6 +271,7 @@ export default function App() {
               ))}
 
             </div>
+
           </div>
 
           {/* UPLOAD */}
@@ -258,7 +295,9 @@ export default function App() {
             />
 
             <button
-              onClick={() => inputRef.current.click()}
+              onClick={() =>
+                inputRef.current.click()
+              }
               className="mt-4 px-4 py-2 rounded-xl bg-black text-white"
             >
               Pilih Foto
@@ -324,11 +363,15 @@ export default function App() {
 
               <input
                 key={index}
-                value={captions[index] || ''}
+                value={
+                  captions[index] || ''
+                }
                 onChange={(e) =>
+
                   setCaptions((prev) => ({
                     ...prev,
-                    [index]: e.target.value,
+                    [index]:
+                      e.target.value,
                   }))
                 }
                 className="w-full border rounded-xl px-4 py-3"
@@ -352,7 +395,7 @@ export default function App() {
             className="mx-auto bg-white shadow-xl w-full max-w-[850px] p-6 rounded-xl"
           >
 
-            {/* TITLE */}
+            {/* HEADER */}
             <div className="text-center mb-6">
 
               <h1 className="text-2xl font-bold">
@@ -360,7 +403,11 @@ export default function App() {
               </h1>
 
               <p className="text-sm text-gray-500">
-                Page {pageIndex + 1} / {pages.length || 1}
+
+                Page {pageIndex + 1}
+                {' / '}
+                {pages.length || 1}
+
               </p>
 
             </div>
@@ -393,7 +440,11 @@ export default function App() {
                     <div className="mt-2 text-center text-xs text-gray-700">
 
                       {captions[globalIndex] ||
-                        ('Foto ' + (globalIndex + 1))}
+
+                        (
+                          'Foto ' +
+                          (globalIndex + 1)
+                        )}
 
                     </div>
 
