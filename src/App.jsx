@@ -172,9 +172,26 @@ export default function App() {
 
           <style>
 
+            *{
+              box-sizing:border-box;
+            }
+
             body{
               font-family:Arial;
               padding:20px;
+              margin:0;
+            }
+
+            h1,
+            h2,
+            h3,
+            h4,
+            h5,
+            h6,
+            p{
+              text-align:center;
+              margin-left:auto;
+              margin-right:auto;
             }
 
             .grid{
@@ -187,6 +204,11 @@ export default function App() {
               width:100%;
               height:auto;
               object-fit:cover;
+              display:block;
+            }
+
+            .text-center{
+              text-align:center !important;
             }
 
           </style>
@@ -225,11 +247,11 @@ export default function App() {
           {/* TITLE */}
           <div>
 
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-2xl font-bold text-center">
               Auto Photo Report
             </h1>
 
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 mt-1 text-center">
               Dokumentasi otomatis multi halaman
             </p>
 
@@ -398,11 +420,11 @@ export default function App() {
             {/* HEADER */}
             <div className="text-center mb-6">
 
-              <h1 className="text-2xl font-bold">
+              <h1 className="text-2xl font-bold text-center">
                 DOKUMENTASI FOTO
               </h1>
 
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 text-center">
 
                 Page {pageIndex + 1}
                 {' / '}
