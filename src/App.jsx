@@ -1,4 +1,3 @@
-```javascript
 import { useRef, useState, useMemo } from 'react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
@@ -20,18 +19,24 @@ export default function App() {
     layout === '3x2' ? 6 :
     9
 
+  // GRID COLUMN
   const cols =
     layout === '2x2' ? 'grid-cols-2' :
     layout === '2x3' ? 'grid-cols-2' :
     layout === '3x2' ? 'grid-cols-3' :
     'grid-cols-3'
 
+  // SPLIT PAGE
   const pages = useMemo(() => {
-    const res = []
+
+    const result = []
+
     for (let i = 0; i < photos.length; i += pageSize) {
-      res.push(photos.slice(i, i + pageSize))
+      result.push(photos.slice(i, i + pageSize))
     }
-    return res
+
+    return result
+
   }, [photos, pageSize])
 
   const currentPage = pages[pageIndex] || []
@@ -41,77 +46,117 @@ export default function App() {
 
     const files = Array.from(e.target.files || [])
 
-    const read = (file) => new Promise((res) => {
-      const r = new FileReader()
-      r.onload = () => res({ url: r.result })
-      r.readAsDataURL(file)
-    })
+    const readFile = (file) => {
+      return new Promise((resolve) => {
 
-    const imgs = await Promise.all(files.map(read))
+        const reader = new FileReader()
 
-    setPhotos(prev => [...prev, ...imgs])
+        reader.onload = () => {
+          resolve({
+            url: reader.result
+          })
+        }
+
+        reader.readAsDataURL(file)
+      })
+    }
+
+    const images = await Promise.all(
+      files.map(readFile)
+    )
+
+    setPhotos(prev => [...prev, ...images])
+
     setPageIndex(0)
   }
 
   // RESET
   const resetAll = () => {
+
     setPhotos([])
     setCaptions({})
     setPageIndex(0)
   }
 
-  // NEXT PREV
+  // NEXT PAGE
   const nextPage = () => {
-    if (pageIndex < pages.length - 1) setPageIndex(p => p + 1)
+
+    if (pageIndex < pages.length - 1) {
+      setPageIndex(prev => prev + 1)
+    }
   }
 
+  // PREV PAGE
   const prevPage = () => {
-    if (pageIndex > 0) setPageIndex(p => p - 1)
+
+    if (pageIndex > 0) {
+      setPageIndex(prev => prev - 1)
+    }
   }
 
-  // EXPORT CURRENT PAGE JPG
+  // EXPORT JPG
   const exportCurrentPage = async () => {
+
+    if (!previewRef.current) return
 
     const canvas = await html2canvas(previewRef.current, {
       scale: 2,
       useCORS: true,
-      backgroundColor: '#fff'
+      backgroundColor: '#ffffff'
     })
 
     const link = document.createElement('a')
-    link.download = `page-${pageIndex + 1}.jpg`
+
+    link.download = 'page-' + (pageIndex + 1) + '.jpg'
+
     link.href = canvas.toDataURL('image/jpeg', 1.0)
+
+    document.body.appendChild(link)
+
     link.click()
+
+    document.body.removeChild(link)
   }
 
   // EXPORT PDF
   const exportPDF = async () => {
 
-    const pagesEl = document.querySelectorAll('.page')
-
-    if (!pagesEl.length) return
-
     const pdf = new jsPDF('p', 'mm', 'a4')
 
-    for (let i = 0; i < pagesEl.length; i++) {
+    const pagesElement = document.querySelectorAll('.pdf-page')
 
-      const canvas = await html2canvas(pagesEl[i], {
+    if (!pagesElement.length) return
+
+    for (let i = 0; i < pagesElement.length; i++) {
+
+      const canvas = await html2canvas(pagesElement[i], {
         scale: 2,
         useCORS: true,
-        backgroundColor: '#fff'
+        backgroundColor: '#ffffff'
       })
 
       const imgData = canvas.toDataURL('image/jpeg', 1.0)
 
       const pdfWidth = 210
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
 
-      if (i > 0) pdf.addPage()
+      const pdfHeight =
+        (canvas.height * pdfWidth) / canvas.width
 
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
+      if (i > 0) {
+        pdf.addPage()
+      }
+
+      pdf.addImage(
+        imgData,
+        'JPEG',
+        0,
+        0,
+        pdfWidth,
+        pdfHeight
+      )
     }
 
-    pdf.save(`dokumentasi-${Date.now()}.pdf`)
+    pdf.save('dokumentasi-' + Date.now() + '.pdf')
   }
 
   return (
@@ -120,106 +165,145 @@ export default function App() {
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* CONTROL PANEL */}
-        <div className="bg-white p-6 rounded-3xl space-y-4">
+        {/* LEFT PANEL */}
+        <div className="bg-white rounded-3xl shadow-lg p-6 space-y-4">
 
-          <h1 className="font-bold text-xl">Auto Photo Report</h1>
+          <div>
+            <h1 className="text-2xl font-bold">
+              Auto Photo Report
+            </h1>
+
+            <p className="text-sm text-gray-500 mt-1">
+              Dokumentasi otomatis multi halaman
+            </p>
+          </div>
 
           {/* LAYOUT */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-2">
 
-            {['2x2','2x3','3x2','3x3'].map(l => (
-              <button
-                key={l}
-                onClick={() => {
-                  setLayout(l)
-                  setPageIndex(0)
-                }}
-                className={`py-2 border rounded-xl ${layout === l ? 'bg-black text-white' : ''}`}
-              >
-                {l}
-              </button>
-            ))}
+            <p className="font-medium">
+              Pilih Layout
+            </p>
 
+            <div className="grid grid-cols-2 gap-2">
+
+              {['2x2', '2x3', '3x2', '3x3'].map((item) => (
+
+                <button
+                  key={item}
+                  onClick={() => {
+                    setLayout(item)
+                    setPageIndex(0)
+                  }}
+                  className={`py-2 rounded-xl border ${
+                    layout === item
+                      ? 'bg-black text-white'
+                      : 'bg-white'
+                  }`}
+                >
+                  {item}
+                </button>
+
+              ))}
+
+            </div>
           </div>
 
           {/* UPLOAD */}
-          <input
-            ref={inputRef}
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleUpload}
-            className="hidden"
-          />
+          <div className="border-2 border-dashed rounded-2xl p-8 text-center bg-gray-50">
 
-          <button
-            onClick={() => inputRef.current.click()}
-            className="w-full py-2 bg-black text-white rounded-xl"
-          >
-            Upload Foto
-          </button>
+            <p className="font-medium">
+              Upload Foto
+            </p>
 
-          {/* NAV */}
+            <p className="text-sm text-gray-500 mt-2">
+              Unlimited Foto
+            </p>
+
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleUpload}
+              className="hidden"
+            />
+
+            <button
+              onClick={() => inputRef.current.click()}
+              className="mt-4 px-4 py-2 rounded-xl bg-black text-white"
+            >
+              Pilih Foto
+            </button>
+          </div>
+
+          {/* PAGE NAV */}
           <div className="flex gap-2">
 
             <button
               onClick={prevPage}
-              className="w-full py-2 border rounded-xl"
+              className="w-full border rounded-xl py-3"
             >
               Prev
             </button>
 
             <button
               onClick={nextPage}
-              className="w-full py-2 border rounded-xl"
+              className="w-full border rounded-xl py-3"
             >
               Next
             </button>
 
           </div>
 
-          {/* EXPORT */}
-          <button
-            onClick={exportCurrentPage}
-            className="w-full py-2 bg-black text-white rounded-xl"
-          >
-            Export Page (JPG)
-          </button>
+          {/* ACTION */}
+          <div className="grid grid-cols-1 gap-3">
 
-          <button
-            onClick={exportPDF}
-            className="w-full py-2 bg-blue-600 text-white rounded-xl"
-          >
-            Save as PDF
-          </button>
+            <button
+              onClick={exportCurrentPage}
+              className="rounded-xl bg-black text-white py-3 font-medium"
+            >
+              Export JPG
+            </button>
 
-          {/* RESET */}
-          <button
-            onClick={resetAll}
-            className="w-full py-2 border rounded-xl text-red-600"
-          >
-            Reset Semua
-          </button>
+            <button
+              onClick={exportPDF}
+              className="rounded-xl bg-blue-600 text-white py-3 font-medium"
+            >
+              Save as PDF
+            </button>
+
+            <button
+              onClick={resetAll}
+              className="rounded-xl border py-3 font-medium text-red-600"
+            >
+              Reset
+            </button>
+
+          </div>
 
           {/* CAPTION */}
-          <div className="space-y-2 max-h-64 overflow-auto">
+          <div className="space-y-3 max-h-[320px] overflow-auto">
 
-            <h2 className="font-semibold">Keterangan Foto</h2>
+            <h2 className="font-semibold">
+              Keterangan Foto
+            </h2>
 
-            {Array.from({ length: photos.length }).map((_, i) => (
+            {Array.from({ length: photos.length }).map((_, index) => (
+
               <input
-                key={i}
-                value={captions[i] || ''}
+                key={index}
+                value={captions[index] || ''}
                 onChange={(e) =>
-                  setCaptions(prev => ({
+                  setCaptions((prev) => ({
                     ...prev,
-                    [i]: e.target.value
+                    [index]: e.target.value,
                   }))
                 }
-                className="w-full border rounded-xl px-3 py-2 text-sm"
-                placeholder={`Foto ${i + 1}`}
+                className="w-full border rounded-xl px-4 py-3"
+                placeholder={'Keterangan Foto ' + (index + 1)}
               />
+
             ))}
 
           </div>
@@ -227,40 +311,56 @@ export default function App() {
         </div>
 
         {/* PREVIEW */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 bg-gray-200 rounded-3xl p-6 overflow-auto">
 
           <div
             ref={previewRef}
-            className="page bg-white p-6 rounded-xl shadow mx-auto"
-            style={{ width: 850 }}
+            className="pdf-page mx-auto bg-white shadow-xl w-full max-w-[850px] p-6 rounded-xl"
           >
 
-            <h2 className="text-center font-bold mb-4">
-              PAGE {pageIndex + 1} / {pages.length || 1}
-            </h2>
+            {/* TITLE */}
+            <div className="text-center mb-6">
 
-            <div className={`grid ${cols} gap-3`}>
+              <h1 className="text-2xl font-bold">
+                DOKUMENTASI FOTO
+              </h1>
 
-              {currentPage.map((img, i) => {
+              <p className="text-sm text-gray-500">
+                Page {pageIndex + 1} / {pages.length || 1}
+              </p>
 
-                const globalIndex = pageIndex * pageSize + i
+            </div>
+
+            {/* GRID */}
+            <div className={`grid ${cols} gap-4`}>
+
+              {currentPage.map((photo, index) => {
+
+                const globalIndex =
+                  pageIndex * pageSize + index
 
                 return (
 
-                  <div key={globalIndex}>
+                  <div
+                    key={globalIndex}
+                    className="flex flex-col"
+                  >
 
-                    <div className="aspect-[3/4] bg-gray-200 rounded overflow-hidden">
+                    <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border bg-gray-100">
 
                       <img
-                        src={img.url}
+                        src={photo.url}
                         className="w-full h-full object-cover"
                       />
 
                     </div>
 
-                    <p className="text-center text-xs mt-1">
-                      {captions[globalIndex] || `Foto ${globalIndex + 1}`}
-                    </p>
+                    <div className="mt-2 text-center text-xs text-gray-700">
+
+                      {captions[globalIndex] ||
+                        ('Foto ' + (globalIndex + 1))}
+
+                    </div>
 
                   </div>
 
@@ -274,6 +374,7 @@ export default function App() {
         </div>
 
       </div>
+
     </div>
   )
 }
