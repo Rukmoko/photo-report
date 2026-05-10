@@ -83,9 +83,15 @@ export default function App() {
     a.click()
   }
 
+  // 🔥 DOWNLOAD FIX STABLE (INI YANG DIPERBAIKI)
   const downloadAll = async () => {
 
     const pagesEl = document.querySelectorAll('.page')
+
+    if (!pagesEl.length) {
+      alert("Tidak ada halaman untuk di-download")
+      return
+    }
 
     const canvases = []
 
@@ -101,7 +107,7 @@ export default function App() {
     }
 
     const width = canvases[0].width
-    const height = canvases.reduce((sum, c) => sum + c.height, 0)
+    const height = canvases.reduce((a, c) => a + c.height, 0)
 
     const finalCanvas = document.createElement('canvas')
     finalCanvas.width = width
@@ -111,15 +117,19 @@ export default function App() {
 
     let offsetY = 0
 
-    canvases.forEach(canvas => {
-      ctx.drawImage(canvas, 0, offsetY)
-      offsetY += canvas.height
+    canvases.forEach(c => {
+      ctx.drawImage(c, 0, offsetY)
+      offsetY += c.height
     })
 
     const link = document.createElement('a')
     link.download = `dokumentasi-${Date.now()}.jpg`
     link.href = finalCanvas.toDataURL('image/jpeg', 1.0)
+
+    // 🔥 FIX BROWSER BLOCK
+    document.body.appendChild(link)
     link.click()
+    document.body.removeChild(link)
   }
 
   return (
@@ -133,7 +143,6 @@ export default function App() {
 
           <h1 className="font-bold text-xl">Auto Report</h1>
 
-          {/* layout */}
           <div className="grid grid-cols-2 gap-2">
 
             {['2x2','2x3','3x2','3x3'].map(l => (
@@ -151,7 +160,6 @@ export default function App() {
 
           </div>
 
-          {/* upload */}
           <input
             ref={inputRef}
             type="file"
@@ -168,7 +176,6 @@ export default function App() {
             Upload Foto
           </button>
 
-          {/* navigation */}
           <div className="flex gap-2">
 
             <button
@@ -189,7 +196,6 @@ export default function App() {
 
           </div>
 
-          {/* export */}
           <button
             onClick={exportCurrentPage}
             className="w-full py-2 bg-black text-white rounded-xl"
@@ -204,7 +210,6 @@ export default function App() {
             Download Semua (1 JPG)
           </button>
 
-          {/* reset */}
           <button
             onClick={resetAll}
             className="w-full py-2 border rounded-xl text-red-600"
@@ -212,7 +217,7 @@ export default function App() {
             Reset Semua
           </button>
 
-          {/* 📌 CAPTION SECTION (FIXED) */}
+          {/* CAPTION */}
           <div className="space-y-2 max-h-64 overflow-auto pt-2">
 
             <h2 className="font-semibold">Keterangan Foto</h2>
