@@ -1,5 +1,9 @@
+# FULL SCRIPT — REMOVE DOWNLOAD JPG + ADD EXPORT PDF
+
+```javascript
 import { useRef, useState, useMemo } from 'react'
 import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 
 export default function App() {
 
@@ -67,13 +71,13 @@ export default function App() {
     if (pageIndex > 0) setPageIndex(p => p - 1)
   }
 
-  // EXPORT 1 PAGE
+  // EXPORT CURRENT PAGE JPG
   const exportCurrentPage = async () => {
 
     const canvas = await html2canvas(previewRef.current, {
       scale: 2,
       useCORS: true,
-      backgroundColor: "#fff"
+      backgroundColor: '#fff'
     })
 
     const link = document.createElement('a')
@@ -82,49 +86,34 @@ export default function App() {
     link.click()
   }
 
-  // DOWNLOAD ALL (MERGE JPG)
-  const downloadAll = async () => {
+  // EXPORT PDF
+  const exportPDF = async () => {
 
     const pagesEl = document.querySelectorAll('.page')
 
     if (!pagesEl.length) return
 
-    const canvases = []
+    const pdf = new jsPDF('p', 'mm', 'a4')
 
     for (let i = 0; i < pagesEl.length; i++) {
 
       const canvas = await html2canvas(pagesEl[i], {
         scale: 2,
         useCORS: true,
-        backgroundColor: "#fff"
+        backgroundColor: '#fff'
       })
 
-      canvases.push(canvas)
+      const imgData = canvas.toDataURL('image/jpeg', 1.0)
+
+      const pdfWidth = 210
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+
+      if (i > 0) pdf.addPage()
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
     }
 
-    const width = canvases[0].width
-    const height = canvases.reduce((a, c) => a + c.height, 0)
-
-    const finalCanvas = document.createElement('canvas')
-    finalCanvas.width = width
-    finalCanvas.height = height
-
-    const ctx = finalCanvas.getContext('2d')
-
-    let offsetY = 0
-
-    canvases.forEach(c => {
-      ctx.drawImage(c, 0, offsetY)
-      offsetY += c.height
-    })
-
-    const link = document.createElement('a')
-    link.download = `dokumentasi-${Date.now()}.jpg`
-    link.href = finalCanvas.toDataURL('image/jpeg', 1.0)
-
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    pdf.save(`dokumentasi-${Date.now()}.pdf`)
   }
 
   return (
@@ -201,10 +190,10 @@ export default function App() {
           </button>
 
           <button
-            onClick={downloadAll}
-            className="w-full py-2 bg-green-600 text-white rounded-xl"
+            onClick={exportPDF}
+            className="w-full py-2 bg-blue-600 text-white rounded-xl"
           >
-            Download Semua (JPG)
+            Save as PDF
           </button>
 
           {/* RESET */}
