@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import html2canvas from 'html2canvas'
 
 export default function App() {
@@ -6,101 +6,74 @@ export default function App() {
   const [photos, setPhotos] = useState([])
   const [captions, setCaptions] = useState({})
   const [layout, setLayout] = useState('3x3')
+  const [pageIndex, setPageIndex] = useState(0)
 
   const inputRef = useRef(null)
   const previewRef = useRef(null)
 
-  // UPLOAD FOTO
-  const handleUpload = async (event) => {
+  const pageSize =
+    layout === '2x2' ? 4 :
+    layout === '2x3' ? 6 :
+    layout === '3x2' ? 6 :
+    9
 
-    const files = Array.from(event.target.files || [])
+  const cols =
+    layout === '2x2' ? 'grid-cols-2' :
+    layout === '2x3' ? 'grid-cols-2' :
+    layout === '3x2' ? 'grid-cols-3' :
+    'grid-cols-3'
 
-    const readFile = (file) => {
-      return new Promise((resolve) => {
-
-        const reader = new FileReader()
-
-        reader.onload = () => {
-          resolve({
-            name: file.name,
-            url: reader.result,
-          })
-        }
-
-        reader.readAsDataURL(file)
-      })
+  const pages = useMemo(() => {
+    const res = []
+    for (let i = 0; i < photos.length; i += pageSize) {
+      res.push(photos.slice(i, i + pageSize))
     }
+    return res
+  }, [photos, pageSize])
 
-    const images = await Promise.all(
-      files.map((file) => readFile(file))
-    )
+  const currentPage = pages[pageIndex] || []
 
-    setPhotos(images.slice(0, 9))
+  const handleUpload = async (e) => {
+
+    const files = Array.from(e.target.files || [])
+
+    const read = (file) => new Promise((res) => {
+      const r = new FileReader()
+      r.onload = () => res({ url: r.result })
+      r.readAsDataURL(file)
+    })
+
+    const imgs = await Promise.all(files.map(read))
+
+    setPhotos(prev => [...prev, ...imgs])
   }
 
-  // UPDATE CAPTION
-  const updateCaption = (index, value) => {
-    setCaptions((prev) => ({
-      ...prev,
-      [index]: value,
-    }))
-  }
-
-  // RESET
-  const resetPhotos = () => {
-    setPhotos([])
-    setCaptions({})
-  }
-
-  // GET GRID CONFIG
-  const getGridClass = () => {
-    switch (layout) {
-      case '2x2':
-        return 'grid-cols-2'
-      case '2x3':
-        return 'grid-cols-2'
-      case '3x2':
-        return 'grid-cols-3'
-      default:
-        return 'grid-cols-3'
+  const nextPage = () => {
+    if (pageIndex < pages.length - 1) {
+      setPageIndex(pageIndex + 1)
     }
   }
 
-  const getMaxItems = () => {
-    switch (layout) {
-      case '2x2':
-        return 4
-      case '2x3':
-        return 6
-      case '3x2':
-        return 6
-      default:
-        return 9
+  const prevPage = () => {
+    if (pageIndex > 0) {
+      setPageIndex(pageIndex - 1)
     }
   }
 
-  // EXPORT JPG
-  const generateJPG = async () => {
+  const exportCurrentPage = async () => {
 
-    if (!previewRef.current) return
+    const node = previewRef.current
 
-    try {
+    const canvas = await html2canvas(node, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#fff"
+    })
 
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff"
-      })
-
-      const link = document.createElement('a')
-      link.download = `dokumentasi-${layout}-${Date.now()}.jpg`
-      link.href = canvas.toDataURL('image/jpeg', 1.0)
-      link.click()
-
-    } catch (error) {
-      console.error(error)
-      alert('Gagal generate JPG')
-    }
+    const a = document.createElement('a')
+    a.download = `page-${pageIndex + 1}.jpg`
+    a.href = canvas.toDataURL('image/jpeg', 1.0)
+    a.click()
   }
 
   return (
@@ -109,165 +82,115 @@ export default function App() {
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* LEFT */}
-        <div className="bg-white rounded-3xl shadow-lg p-6 space-y-4">
+        {/* CONTROL */}
+        <div className="bg-white p-6 rounded-3xl space-y-4">
 
-          <div>
-            <h1 className="text-2xl font-bold">
-              Auto Photo Report
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Dokumentasi otomatis multi layout
-            </p>
-          </div>
+          <h1 className="font-bold text-xl">Auto Report</h1>
 
-          {/* LAYOUT SELECTOR */}
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
 
-            <p className="font-medium">Pilih Layout</p>
-
-            <div className="grid grid-cols-2 gap-2">
-
-              {['2x2', '2x3', '3x2', '3x3'].map((item) => (
-
-                <button
-                  key={item}
-                  onClick={() => setLayout(item)}
-                  className={`py-2 rounded-xl border ${
-                    layout === item
-                      ? 'bg-black text-white'
-                      : 'bg-white'
-                  }`}
-                >
-                  {item}
-                </button>
-
-              ))}
-
-            </div>
-          </div>
-
-          {/* UPLOAD */}
-          <div className="border-2 border-dashed rounded-2xl p-8 text-center bg-gray-50">
-
-            <p className="font-medium">Upload Foto</p>
-
-            <p className="text-sm text-gray-500 mt-2">
-              Maksimal {getMaxItems()} foto
-            </p>
-
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleUpload}
-              className="hidden"
-            />
-
-            <button
-              onClick={() => inputRef.current?.click()}
-              className="mt-4 px-4 py-2 rounded-xl bg-black text-white"
-            >
-              Pilih Foto
-            </button>
-          </div>
-
-          {/* CAPTION */}
-          <div className="space-y-3 max-h-[320px] overflow-auto">
-
-            <h2 className="font-semibold">
-              Keterangan Foto
-            </h2>
-
-            {Array.from({ length: getMaxItems() }).map((_, index) => (
-              <input
-                key={index}
-                value={captions[index] || ''}
-                onChange={(e) =>
-                  updateCaption(index, e.target.value)
-                }
-                className="w-full border rounded-xl px-4 py-3"
-                placeholder={`Keterangan Foto ${index + 1}`}
-              />
+            {['2x2','2x3','3x2','3x3'].map(l => (
+              <button
+                key={l}
+                onClick={() => { setLayout(l); setPageIndex(0) }}
+                className={`py-2 border rounded-xl ${layout === l ? 'bg-black text-white' : ''}`}
+              >
+                {l}
+              </button>
             ))}
+
           </div>
 
-          {/* BUTTON */}
-          <div className="grid grid-cols-2 gap-3">
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handleUpload}
+            className="hidden"
+          />
+
+          <button
+            onClick={() => inputRef.current.click()}
+            className="w-full py-2 bg-black text-white rounded-xl"
+          >
+            Upload
+          </button>
+
+          <div className="flex gap-2">
 
             <button
-              onClick={generateJPG}
-              className="rounded-xl bg-black text-white py-3 font-medium"
+              onClick={prevPage}
+              className="w-full py-2 border rounded-xl"
             >
-              Generate JPG
+              Prev
             </button>
 
             <button
-              onClick={resetPhotos}
-              className="rounded-xl border py-3 font-medium"
+              onClick={nextPage}
+              className="w-full py-2 border rounded-xl"
             >
-              Reset
+              Next
             </button>
+
           </div>
+
+          <button
+            onClick={exportCurrentPage}
+            className="w-full py-2 bg-black text-white rounded-xl"
+          >
+            Export Page
+          </button>
+
         </div>
 
         {/* PREVIEW */}
-        <div className="lg:col-span-2 bg-gray-200 rounded-3xl p-6 overflow-auto">
+        <div className="lg:col-span-2">
 
           <div
             ref={previewRef}
-            className="mx-auto bg-white shadow-xl w-full max-w-[850px] p-6 rounded-xl"
+            className="page bg-white p-6 rounded-xl shadow mx-auto"
+            style={{ width: 850 }}
           >
 
-            {/* TITLE */}
-            <div className="text-center mb-6">
+            <h2 className="text-center font-bold mb-4">
+              PAGE {pageIndex + 1} / {pages.length || 1}
+            </h2>
 
-              <h1 className="text-2xl font-bold">
-                DOKUMENTASI FOTO
-              </h1>
+            <div className={`grid ${cols} gap-3`}>
 
-              <p className="text-sm text-gray-500">
-                Layout {layout}
-              </p>
-            </div>
+              {currentPage.map((img, i) => {
 
-            {/* GRID */}
-            <div className={`grid ${getGridClass()} gap-4`}>
-
-              {Array.from({ length: getMaxItems() }).map((_, index) => {
-
-                const photo = photos[index]
+                const globalIndex = pageIndex * pageSize + i
 
                 return (
-                  <div key={index} className="flex flex-col">
 
-                    <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border bg-gray-100">
+                  <div key={globalIndex}>
 
-                      {photo?.url ? (
-                        <img
-                          src={photo.url}
-                          alt={photo.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
-                          Foto {index + 1}
-                        </div>
-                      )}
+                    <div className="aspect-[3/4] bg-gray-200 rounded overflow-hidden">
+
+                      <img
+                        src={img.url}
+                        className="w-full h-full object-cover"
+                      />
+
                     </div>
 
-                    <div className="mt-2 text-center text-xs text-gray-700">
-                      {captions[index] || `Foto ${index + 1}`}
-                    </div>
+                    <p className="text-center text-xs mt-1">
+                      Foto {globalIndex + 1}
+                    </p>
 
                   </div>
+
                 )
               })}
 
             </div>
+
           </div>
+
         </div>
+
       </div>
     </div>
   )
