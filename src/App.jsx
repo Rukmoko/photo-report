@@ -83,12 +83,9 @@ export default function App() {
     a.click()
   }
 
-  // 🔥 DOWNLOAD ALL PAGE -> 1 JPG
   const downloadAll = async () => {
 
     const pagesEl = document.querySelectorAll('.page')
-
-    if (!pagesEl.length) return
 
     const canvases = []
 
@@ -136,6 +133,7 @@ export default function App() {
 
           <h1 className="font-bold text-xl">Auto Report</h1>
 
+          {/* layout */}
           <div className="grid grid-cols-2 gap-2">
 
             {['2x2','2x3','3x2','3x3'].map(l => (
@@ -153,6 +151,7 @@ export default function App() {
 
           </div>
 
+          {/* upload */}
           <input
             ref={inputRef}
             type="file"
@@ -169,6 +168,7 @@ export default function App() {
             Upload Foto
           </button>
 
+          {/* navigation */}
           <div className="flex gap-2">
 
             <button
@@ -189,6 +189,7 @@ export default function App() {
 
           </div>
 
+          {/* export */}
           <button
             onClick={exportCurrentPage}
             className="w-full py-2 bg-black text-white rounded-xl"
@@ -203,12 +204,35 @@ export default function App() {
             Download Semua (1 JPG)
           </button>
 
+          {/* reset */}
           <button
             onClick={resetAll}
             className="w-full py-2 border rounded-xl text-red-600"
           >
             Reset Semua
           </button>
+
+          {/* 📌 CAPTION SECTION (FIXED) */}
+          <div className="space-y-2 max-h-64 overflow-auto pt-2">
+
+            <h2 className="font-semibold">Keterangan Foto</h2>
+
+            {Array.from({ length: photos.length }).map((_, index) => (
+              <input
+                key={index}
+                value={captions[index] || ''}
+                onChange={(e) =>
+                  setCaptions(prev => ({
+                    ...prev,
+                    [index]: e.target.value
+                  }))
+                }
+                className="w-full border rounded-xl px-3 py-2 text-sm"
+                placeholder={`Keterangan Foto ${index + 1}`}
+              />
+            ))}
+
+          </div>
 
         </div>
 
@@ -245,7 +269,7 @@ export default function App() {
                     </div>
 
                     <p className="text-center text-xs mt-1">
-                      Foto {globalIndex + 1}
+                      {captions[globalIndex] || `Foto ${globalIndex + 1}`}
                     </p>
 
                   </div>
