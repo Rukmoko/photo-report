@@ -46,6 +46,7 @@ export default function App() {
     const imgs = await Promise.all(files.map(read))
 
     setPhotos(prev => [...prev, ...imgs])
+    setPageIndex(0)
   }
 
   const nextPage = () => {
@@ -58,6 +59,12 @@ export default function App() {
     if (pageIndex > 0) {
       setPageIndex(pageIndex - 1)
     }
+  }
+
+  const resetAll = () => {
+    setPhotos([])
+    setCaptions({})
+    setPageIndex(0)
   }
 
   const exportCurrentPage = async () => {
@@ -76,6 +83,48 @@ export default function App() {
     a.click()
   }
 
+  // 🔥 DOWNLOAD ALL PAGE -> 1 JPG
+  const downloadAll = async () => {
+
+    const pagesEl = document.querySelectorAll('.page')
+
+    if (!pagesEl.length) return
+
+    const canvases = []
+
+    for (let i = 0; i < pagesEl.length; i++) {
+
+      const canvas = await html2canvas(pagesEl[i], {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#fff"
+      })
+
+      canvases.push(canvas)
+    }
+
+    const width = canvases[0].width
+    const height = canvases.reduce((sum, c) => sum + c.height, 0)
+
+    const finalCanvas = document.createElement('canvas')
+    finalCanvas.width = width
+    finalCanvas.height = height
+
+    const ctx = finalCanvas.getContext('2d')
+
+    let offsetY = 0
+
+    canvases.forEach(canvas => {
+      ctx.drawImage(canvas, 0, offsetY)
+      offsetY += canvas.height
+    })
+
+    const link = document.createElement('a')
+    link.download = `dokumentasi-${Date.now()}.jpg`
+    link.href = finalCanvas.toDataURL('image/jpeg', 1.0)
+    link.click()
+  }
+
   return (
 
     <div className="min-h-screen bg-gray-100 p-6">
@@ -92,7 +141,10 @@ export default function App() {
             {['2x2','2x3','3x2','3x3'].map(l => (
               <button
                 key={l}
-                onClick={() => { setLayout(l); setPageIndex(0) }}
+                onClick={() => {
+                  setLayout(l)
+                  setPageIndex(0)
+                }}
                 className={`py-2 border rounded-xl ${layout === l ? 'bg-black text-white' : ''}`}
               >
                 {l}
@@ -114,21 +166,23 @@ export default function App() {
             onClick={() => inputRef.current.click()}
             className="w-full py-2 bg-black text-white rounded-xl"
           >
-            Upload
+            Upload Foto
           </button>
 
           <div className="flex gap-2">
 
             <button
               onClick={prevPage}
-              className="w-full py-2 border rounded-xl"
+              disabled={pageIndex === 0}
+              className="w-full py-2 border rounded-xl disabled:opacity-40"
             >
               Prev
             </button>
 
             <button
               onClick={nextPage}
-              className="w-full py-2 border rounded-xl"
+              disabled={pageIndex >= pages.length - 1}
+              className="w-full py-2 border rounded-xl disabled:opacity-40"
             >
               Next
             </button>
@@ -139,7 +193,21 @@ export default function App() {
             onClick={exportCurrentPage}
             className="w-full py-2 bg-black text-white rounded-xl"
           >
-            Export Page
+            Export Page (JPG)
+          </button>
+
+          <button
+            onClick={downloadAll}
+            className="w-full py-2 bg-green-600 text-white rounded-xl"
+          >
+            Download Semua (1 JPG)
+          </button>
+
+          <button
+            onClick={resetAll}
+            className="w-full py-2 border rounded-xl text-red-600"
+          >
+            Reset Semua
           </button>
 
         </div>
