@@ -18,12 +18,22 @@ export default function App() {
     layout === '3x2' ? 6 :
     9
 
-  // GRID
+  // GRID COLS
   const cols =
-    layout === '2x2' ? 'grid-cols-2' :
-    layout === '2x3' ? 'grid-cols-2' :
-    layout === '3x2' ? 'grid-cols-3' :
-    'grid-cols-3'
+    layout === '2x2' ? 2 :
+    layout === '2x3' ? 2 :
+    layout === '3x2' ? 3 :
+    3
+
+  // GRID CLASS
+  const gridClass =
+    layout === '2x2'
+      ? 'grid-cols-2'
+      : layout === '2x3'
+      ? 'grid-cols-2'
+      : layout === '3x2'
+      ? 'grid-cols-3'
+      : 'grid-cols-3'
 
   // SPLIT PAGE
   const pages = useMemo(() => {
@@ -31,14 +41,18 @@ export default function App() {
     const result = []
 
     for (let i = 0; i < photos.length; i += pageSize) {
-      result.push(photos.slice(i, i + pageSize))
+
+      result.push(
+        photos.slice(i, i + pageSize)
+      )
     }
 
     return result
 
   }, [photos, pageSize])
 
-  const currentPage = pages[pageIndex] || []
+  const currentPage =
+    pages[pageIndex] || []
 
   // UPLOAD
   const handleUpload = async (e) => {
@@ -51,7 +65,8 @@ export default function App() {
 
       return new Promise((resolve) => {
 
-        const reader = new FileReader()
+        const reader =
+          new FileReader()
 
         reader.onload = () => {
 
@@ -64,9 +79,10 @@ export default function App() {
       })
     }
 
-    const images = await Promise.all(
-      files.map(readFile)
-    )
+    const images =
+      await Promise.all(
+        files.map(readFile)
+      )
 
     setPhotos(prev => [
       ...prev,
@@ -87,9 +103,13 @@ export default function App() {
   // NEXT PAGE
   const nextPage = () => {
 
-    if (pageIndex < pages.length - 1) {
-
-      setPageIndex(prev => prev + 1)
+    if (
+      pageIndex <
+      pages.length - 1
+    ) {
+      setPageIndex(
+        prev => prev + 1
+      )
     }
   }
 
@@ -98,141 +118,161 @@ export default function App() {
 
     if (pageIndex > 0) {
 
-      setPageIndex(prev => prev - 1)
+      setPageIndex(
+        prev => prev - 1
+      )
     }
   }
 
   // EXPORT JPG
-  const exportCurrentPage = async () => {
+  const exportCurrentPage =
+    async () => {
 
-    if (!previewRef.current) return
+      if (!previewRef.current)
+        return
 
-    try {
+      try {
 
-      const canvas =
-        await html2canvas(
-          previewRef.current,
-          {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff'
-          }
+        const canvas =
+          await html2canvas(
+            previewRef.current,
+            {
+              useCORS: true,
+              scale: 3,
+              backgroundColor:
+                '#ffffff'
+            }
+          )
+
+        const image =
+          canvas.toDataURL(
+            'image/jpeg',
+            1.0
+          )
+
+        const link =
+          document.createElement(
+            'a'
+          )
+
+        link.href = image
+
+        link.setAttribute(
+          'download',
+          `dokumentasi-page-${pageIndex + 1}.jpg`
         )
 
-      const link =
-        document.createElement('a')
-
-      link.download =
-        'page-' +
-        (pageIndex + 1) +
-        '.jpg'
-
-      link.href =
-        canvas.toDataURL(
-          'image/jpeg',
-          1.0
+        document.body.appendChild(
+          link
         )
 
-      document.body.appendChild(link)
+        link.click()
 
-      link.click()
+        link.remove()
 
-      document.body.removeChild(link)
+      } catch (err) {
 
-    } catch (err) {
+        console.error(err)
 
-      console.error(err)
-
-      alert('Gagal export JPG')
+        alert(
+          'Export JPG gagal'
+        )
+      }
     }
-  }
 
-  // SAVE AS PDF
+  // SAVE PDF
   const exportPDF = () => {
 
-    if (!previewRef.current) return
+    if (!previewRef.current)
+      return
 
     const printContents =
       previewRef.current.innerHTML
 
-    const win = window.open(
-      '',
-      '',
-      'width=900,height=650'
-    )
+    const win =
+      window.open(
+        '',
+        '_blank'
+      )
 
     win.document.write(`
       <html>
 
-        <head>
+      <head>
 
-          <title>
-            Dokumentasi Foto
-          </title>
+        <title>
+          Dokumentasi Foto
+        </title>
 
-          <style>
+        <style>
 
-            *{
-              box-sizing:border-box;
-            }
+          @page{
+            size:A4 portrait;
+            margin:8mm;
+          }
 
-            body{
-              font-family:Arial;
-              padding:20px;
-              margin:0;
-            }
+          *{
+            box-sizing:border-box;
+          }
 
-            h1,
-            h2,
-            h3,
-            h4,
-            h5,
-            h6,
-            p{
-              text-align:center;
-              margin-left:auto;
-              margin-right:auto;
-            }
+          body{
+            margin:0;
+            font-family:Arial;
+            background:white;
+          }
 
-            .grid{
-              display:grid;
-              grid-template-columns:repeat(3,1fr);
-              gap:12px;
-            }
+          .wrapper{
+            width:100%;
+            padding:10px;
+          }
 
-            img{
-              width:100%;
-              height:auto;
-              object-fit:cover;
-              display:block;
-            }
+          .grid{
+            display:grid;
+            grid-template-columns:repeat(${cols},1fr);
+            gap:10px;
+          }
 
-            .text-center{
-              text-align:center !important;
-            }
+          img{
+            width:100%;
+            aspect-ratio:3/4;
+            object-fit:cover;
+            display:block;
+          }
 
-          </style>
+          h1,p{
+            text-align:center;
+          }
 
-        </head>
+          .text-center{
+            text-align:center !important;
+          }
 
-        <body>
+        </style>
+
+      </head>
+
+      <body>
+
+        <div class="wrapper">
 
           ${printContents}
 
-        </body>
+        </div>
+
+      </body>
 
       </html>
     `)
 
     win.document.close()
 
-    win.focus()
-
     setTimeout(() => {
+
+      win.focus()
 
       win.print()
 
-    }, 500)
+    }, 800)
   }
 
   return (
@@ -241,7 +281,7 @@ export default function App() {
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* LEFT PANEL */}
+        {/* LEFT */}
         <div className="bg-white rounded-3xl shadow-lg p-6 space-y-4">
 
           {/* TITLE */}
@@ -251,7 +291,7 @@ export default function App() {
               Auto Photo Report
             </h1>
 
-            <p className="text-sm text-gray-500 mt-1 text-center">
+            <p className="text-sm text-gray-500 text-center mt-1">
               Dokumentasi otomatis multi halaman
             </p>
 
@@ -327,7 +367,7 @@ export default function App() {
 
           </div>
 
-          {/* PAGE NAV */}
+          {/* NAV */}
           <div className="flex gap-2">
 
             <button
@@ -350,7 +390,9 @@ export default function App() {
           <div className="grid grid-cols-1 gap-3">
 
             <button
-              onClick={exportCurrentPage}
+              onClick={
+                exportCurrentPage
+              }
               className="rounded-xl bg-black text-white py-3 font-medium"
             >
               Export JPG
@@ -380,27 +422,29 @@ export default function App() {
             </h2>
 
             {Array.from({
-              length: photos.length
+              length:
+                photos.length
             }).map((_, index) => (
 
               <input
                 key={index}
                 value={
-                  captions[index] || ''
+                  captions[index] ||
+                  ''
                 }
                 onChange={(e) =>
 
-                  setCaptions((prev) => ({
-                    ...prev,
-                    [index]:
-                      e.target.value,
-                  }))
+                  setCaptions(
+                    prev => ({
+                      ...prev,
+                      [index]:
+                        e.target
+                          .value,
+                    })
+                  )
                 }
                 className="w-full border rounded-xl px-4 py-3"
-                placeholder={
-                  'Keterangan Foto ' +
-                  (index + 1)
-                }
+                placeholder={`Keterangan Foto ${index + 1}`}
               />
 
             ))}
@@ -420,11 +464,11 @@ export default function App() {
             {/* HEADER */}
             <div className="text-center mb-6">
 
-              <h1 className="text-2xl font-bold text-center">
+              <h1 className="text-2xl font-bold">
                 DOKUMENTASI FOTO
               </h1>
 
-              <p className="text-sm text-gray-500 text-center">
+              <p className="text-sm text-gray-500">
 
                 Page {pageIndex + 1}
                 {' / '}
@@ -435,45 +479,53 @@ export default function App() {
             </div>
 
             {/* GRID */}
-            <div className={`grid ${cols} gap-4`}>
+            <div className={`grid ${gridClass} gap-4`}>
 
-              {currentPage.map((photo, index) => {
+              {currentPage.map(
+                (
+                  photo,
+                  index
+                ) => {
 
-                const globalIndex =
-                  pageIndex * pageSize + index
+                  const globalIndex =
+                    pageIndex *
+                      pageSize +
+                    index
 
-                return (
+                  return (
 
-                  <div
-                    key={globalIndex}
-                    className="flex flex-col"
-                  >
+                    <div
+                      key={
+                        globalIndex
+                      }
+                      className="flex flex-col"
+                    >
 
-                    <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border bg-gray-100">
+                      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border bg-gray-100">
 
-                      <img
-                        src={photo.url}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
+                        <img
+                          src={
+                            photo.url
+                          }
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+
+                      </div>
+
+                      <div className="mt-2 text-center text-xs text-gray-700">
+
+                        {captions[
+                          globalIndex
+                        ] ||
+                          `Foto ${globalIndex + 1}`}
+
+                      </div>
 
                     </div>
-
-                    <div className="mt-2 text-center text-xs text-gray-700">
-
-                      {captions[globalIndex] ||
-
-                        (
-                          'Foto ' +
-                          (globalIndex + 1)
-                        )}
-
-                    </div>
-
-                  </div>
-
-                )
-              })}
+                  )
+                }
+              )}
 
             </div>
 
