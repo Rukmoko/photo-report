@@ -19,7 +19,7 @@ export default function App() {
     layout === '3x2' ? 6 :
     9
 
-  // GRID COLUMN
+  // GRID
   const cols =
     layout === '2x2' ? 'grid-cols-2' :
     layout === '2x3' ? 'grid-cols-2' :
@@ -99,52 +99,68 @@ export default function App() {
 
     if (!previewRef.current) return
 
-    const canvas = await html2canvas(previewRef.current, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff'
-    })
+    try {
 
-    const link = document.createElement('a')
+      const canvas = await html2canvas(
+        previewRef.current,
+        {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff'
+        }
+      )
 
-    link.download = 'page-' + (pageIndex + 1) + '.jpg'
+      const link = document.createElement('a')
 
-    link.href = canvas.toDataURL('image/jpeg', 1.0)
+      link.download =
+        'page-' + (pageIndex + 1) + '.jpg'
 
-    document.body.appendChild(link)
+      link.href =
+        canvas.toDataURL('image/jpeg', 1.0)
 
-    link.click()
+      document.body.appendChild(link)
 
-    document.body.removeChild(link)
+      link.click()
+
+      document.body.removeChild(link)
+
+    } catch (error) {
+
+      console.error(error)
+
+      alert('Gagal export JPG')
+    }
   }
 
   // EXPORT PDF
   const exportPDF = async () => {
 
-    const pdf = new jsPDF('p', 'mm', 'a4')
+    if (!previewRef.current) return
 
-    const pagesElement = document.querySelectorAll('.pdf-page')
+    try {
 
-    if (!pagesElement.length) return
+      const canvas = await html2canvas(
+        previewRef.current,
+        {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff'
+        }
+      )
 
-    for (let i = 0; i < pagesElement.length; i++) {
+      const imgData =
+        canvas.toDataURL('image/jpeg', 1.0)
 
-      const canvas = await html2canvas(pagesElement[i], {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff'
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
       })
-
-      const imgData = canvas.toDataURL('image/jpeg', 1.0)
 
       const pdfWidth = 210
 
       const pdfHeight =
         (canvas.height * pdfWidth) / canvas.width
-
-      if (i > 0) {
-        pdf.addPage()
-      }
 
       pdf.addImage(
         imgData,
@@ -154,9 +170,19 @@ export default function App() {
         pdfWidth,
         pdfHeight
       )
-    }
 
-    pdf.save('dokumentasi-' + Date.now() + '.pdf')
+      pdf.save(
+        'dokumentasi-' +
+        Date.now() +
+        '.pdf'
+      )
+
+    } catch (error) {
+
+      console.error(error)
+
+      alert('Gagal membuat PDF')
+    }
   }
 
   return (
@@ -169,6 +195,7 @@ export default function App() {
         <div className="bg-white rounded-3xl shadow-lg p-6 space-y-4">
 
           <div>
+
             <h1 className="text-2xl font-bold">
               Auto Photo Report
             </h1>
@@ -176,6 +203,7 @@ export default function App() {
             <p className="text-sm text-gray-500 mt-1">
               Dokumentasi otomatis multi halaman
             </p>
+
           </div>
 
           {/* LAYOUT */}
@@ -235,6 +263,7 @@ export default function App() {
             >
               Pilih Foto
             </button>
+
           </div>
 
           {/* PAGE NAV */}
@@ -289,7 +318,9 @@ export default function App() {
               Keterangan Foto
             </h2>
 
-            {Array.from({ length: photos.length }).map((_, index) => (
+            {Array.from({
+              length: photos.length
+            }).map((_, index) => (
 
               <input
                 key={index}
@@ -301,7 +332,10 @@ export default function App() {
                   }))
                 }
                 className="w-full border rounded-xl px-4 py-3"
-                placeholder={'Keterangan Foto ' + (index + 1)}
+                placeholder={
+                  'Keterangan Foto ' +
+                  (index + 1)
+                }
               />
 
             ))}
@@ -315,7 +349,7 @@ export default function App() {
 
           <div
             ref={previewRef}
-            className="pdf-page mx-auto bg-white shadow-xl w-full max-w-[850px] p-6 rounded-xl"
+            className="mx-auto bg-white shadow-xl w-full max-w-[850px] p-6 rounded-xl"
           >
 
             {/* TITLE */}
@@ -350,6 +384,7 @@ export default function App() {
 
                       <img
                         src={photo.url}
+                        alt=""
                         className="w-full h-full object-cover"
                       />
 
