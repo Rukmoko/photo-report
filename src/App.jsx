@@ -1,5 +1,3 @@
-# FULL SCRIPT — REMOVE DOWNLOAD JPG + ADD EXPORT PDF
-
 ```javascript
 import { useRef, useState, useMemo } from 'react'
 import html2canvas from 'html2canvas'
