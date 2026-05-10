@@ -1,6 +1,20 @@
 import { useRef, useState, useMemo } from 'react'
 import html2canvas from 'html2canvas'
 
+import {
+  DndContext,
+  closestCenter
+} from '@dnd-kit/core'
+
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable'
+
+import { CSS } from '@dnd-kit/utilities'
+
 export default function App() {
 
   const [photos, setPhotos] = useState([])
@@ -39,32 +53,28 @@ export default function App() {
 
     const read = (file) => new Promise((res) => {
       const r = new FileReader()
-      r.onload = () => res({ url: r.result })
+      r.onload = () => res({ url: r.result, id: crypto.randomUUID() })
       r.readAsDataURL(file)
     })
 
     const imgs = await Promise.all(files.map(read))
 
     setPhotos(prev => [...prev, ...imgs])
-    setPageIndex(0)
   }
 
-  const nextPage = () => {
-    if (pageIndex < pages.length - 1) {
-      setPageIndex(pageIndex + 1)
-    }
-  }
+  const handleDragEnd = (event) => {
 
-  const prevPage = () => {
-    if (pageIndex > 0) {
-      setPageIndex(pageIndex - 1)
-    }
-  }
+    const { active, over } = event
 
-  const resetAll = () => {
-    setPhotos([])
-    setCaptions({})
-    setPageIndex(0)
+    if (!over || active.id === over.id) return
+
+    setPhotos((items) => {
+
+      const oldIndex = items.findIndex(i => i.id === active.id)
+      const newIndex = items.findIndex(i => i.id === over.id)
+
+      return arrayMove(items, oldIndex, newIndex)
+    })
   }
 
   const exportCurrentPage = async () => {
@@ -83,15 +93,9 @@ export default function App() {
     a.click()
   }
 
-  // 🔥 DOWNLOAD FIX STABLE (INI YANG DIPERBAIKI)
   const downloadAll = async () => {
 
     const pagesEl = document.querySelectorAll('.page')
-
-    if (!pagesEl.length) {
-      alert("Tidak ada halaman untuk di-download")
-      return
-    }
 
     const canvases = []
 
@@ -126,7 +130,6 @@ export default function App() {
     link.download = `dokumentasi-${Date.now()}.jpg`
     link.href = finalCanvas.toDataURL('image/jpeg', 1.0)
 
-    // 🔥 FIX BROWSER BLOCK
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -142,23 +145,6 @@ export default function App() {
         <div className="bg-white p-6 rounded-3xl space-y-4">
 
           <h1 className="font-bold text-xl">Auto Report</h1>
-
-          <div className="grid grid-cols-2 gap-2">
-
-            {['2x2','2x3','3x2','3x3'].map(l => (
-              <button
-                key={l}
-                onClick={() => {
-                  setLayout(l)
-                  setPageIndex(0)
-                }}
-                className={`py-2 border rounded-xl ${layout === l ? 'bg-black text-white' : ''}`}
-              >
-                {l}
-              </button>
-            ))}
-
-          </div>
 
           <input
             ref={inputRef}
@@ -176,119 +162,84 @@ export default function App() {
             Upload Foto
           </button>
 
-          <div className="flex gap-2">
-
-            <button
-              onClick={prevPage}
-              disabled={pageIndex === 0}
-              className="w-full py-2 border rounded-xl disabled:opacity-40"
-            >
-              Prev
-            </button>
-
-            <button
-              onClick={nextPage}
-              disabled={pageIndex >= pages.length - 1}
-              className="w-full py-2 border rounded-xl disabled:opacity-40"
-            >
-              Next
-            </button>
-
-          </div>
-
           <button
             onClick={exportCurrentPage}
             className="w-full py-2 bg-black text-white rounded-xl"
           >
-            Export Page (JPG)
+            Export Page
           </button>
 
           <button
             onClick={downloadAll}
             className="w-full py-2 bg-green-600 text-white rounded-xl"
           >
-            Download Semua (1 JPG)
+            Download Semua
           </button>
-
-          <button
-            onClick={resetAll}
-            className="w-full py-2 border rounded-xl text-red-600"
-          >
-            Reset Semua
-          </button>
-
-          {/* CAPTION */}
-          <div className="space-y-2 max-h-64 overflow-auto pt-2">
-
-            <h2 className="font-semibold">Keterangan Foto</h2>
-
-            {Array.from({ length: photos.length }).map((_, index) => (
-              <input
-                key={index}
-                value={captions[index] || ''}
-                onChange={(e) =>
-                  setCaptions(prev => ({
-                    ...prev,
-                    [index]: e.target.value
-                  }))
-                }
-                className="w-full border rounded-xl px-3 py-2 text-sm"
-                placeholder={`Keterangan Foto ${index + 1}`}
-              />
-            ))}
-
-          </div>
 
         </div>
 
         {/* PREVIEW */}
         <div className="lg:col-span-2">
 
-          <div
-            ref={previewRef}
-            className="page bg-white p-6 rounded-xl shadow mx-auto"
-            style={{ width: 850 }}
+          <DndContext
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
 
-            <h2 className="text-center font-bold mb-4">
-              PAGE {pageIndex + 1} / {pages.length || 1}
-            </h2>
+            <div
+              ref={previewRef}
+              className="page bg-white p-6 rounded-xl shadow mx-auto"
+              style={{ width: 850 }}
+            >
 
-            <div className={`grid ${cols} gap-3`}>
+              <div className={`grid ${cols} gap-3`}>
 
-              {currentPage.map((img, i) => {
+                <SortableContext items={photos.map(p => p.id)}>
 
-                const globalIndex = pageIndex * pageSize + i
+                  {photos.map((img, i) => (
+                    <SortableItem key={img.id} id={img.id} img={img} />
+                  ))}
 
-                return (
+                </SortableContext>
 
-                  <div key={globalIndex}>
-
-                    <div className="aspect-[3/4] bg-gray-200 rounded overflow-hidden">
-
-                      <img
-                        src={img.url}
-                        className="w-full h-full object-cover"
-                      />
-
-                    </div>
-
-                    <p className="text-center text-xs mt-1">
-                      {captions[globalIndex] || `Foto ${globalIndex + 1}`}
-                    </p>
-
-                  </div>
-
-                )
-              })}
+              </div>
 
             </div>
 
-          </div>
+          </DndContext>
 
         </div>
 
       </div>
+    </div>
+  )
+}
+
+// 🔥 DRAG ITEM
+function SortableItem({ id, img }) {
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition
+  } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="aspect-[3/4] bg-gray-200 rounded overflow-hidden cursor-grab"
+    >
+      <img src={img.url} className="w-full h-full object-cover" />
     </div>
   )
 }
